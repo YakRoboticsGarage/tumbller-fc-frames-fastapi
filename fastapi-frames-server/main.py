@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import httpx
 from pathlib import Path
 
@@ -9,182 +10,64 @@ BASE_DIR = Path(__file__).resolve().parent
 app = FastAPI()
 
 # Mount the static directory to serve images
-app.mount("/static",
-          StaticFiles(directory=Path(BASE_DIR, 'static')),
-          name="static")
+app.mount("/static", StaticFiles(directory=Path(BASE_DIR, 'static')), name="static")
 
+# Set up Jinja2 templates
+templates = Jinja2Templates(directory="templates")
+
+# Define the base URL for all buttons. Get this from what ngrok generates
+BASE_URL = "http://b2d8-85-76-113-250.ngrok-free.app"
+
+# Define the base URL for the Tumbller device. Check this from the serial monitor output of the Tumbller device
+TUMBLLER_BASE_URL = "http://tumbbler"
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Simple OG Tags Example</title>
-        <!-- Open Graph meta tags -->
-        <meta property="og:title" content="Simple OG Tags Example">
-        <meta property="og:image" content="https://i.imgur.com/WVi3q3d.jpeg" >
-
-        <!-- Farcaster frame meta tags -->
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://i.imgur.com/WVi3q3d.jpeg" >
-        
-        <meta property="fc:frame:button:1" content="Forward">
-        <meta property="fc:frame:button:1:action" content="post">
-        <meta property="fc:frame:button:1:target" content=" http://353a-85-76-103-9.ngrok-free.app/forward">
-        
-        <meta property="fc:frame:button:2" content="Back">
-        <meta property="fc:frame:button:2:action" content="post">
-        <meta property="fc:frame:button:2:target" content=" http://353a-85-76-103-9.ngrok-free.app/back">
-
-        <meta property="fc:frame:button:3" content="Stop">
-        <meta property="fc:frame:button:3:action" content="post">
-        <meta property="fc:frame:button:3:target" content=" http://353a-85-76-103-9.ngrok-free.app/stop">
-
-    </head>
-    <body>
-        <h1>Tumbller Farcaster Frame Server</h1>
-        <p>This will run commands on Tumbller</p>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content, status_code=200)
+async def root(request: Request):
+    return templates.TemplateResponse("fcframe.html", {
+        "request": request,
+        "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg", # TODO: Take image from the static directory
+        "page_title": "Tumbller Farcaster Frame Server",
+        "base_url": BASE_URL
+    })
 
 
-# endpoint /motor/forward to send GET request to ip address of ESP32
 @app.post("/forward")
-async def forward1():
-    url = "http://tumbller/motor/forward"
+async def forward1(request: Request):
+    url = f"{TUMBLLER_BASE_URL}/motor/forward"
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Simple OG Tags Example</title>
-        <!-- Open Graph meta tags -->
-        <meta property="og:title" content="Simple OG Tags Example">
-        <!-- meta property="og:image" content="https://i.imgur.com/LH739Tc.png" -->
-
-        <!-- Farcaster frame meta tags -->
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://i.imgur.com/LH739Tc.png">
-
-        <meta property="fc:frame:button:1" content="Forward">
-        <meta property="fc:frame:button:1:action" content="post">
-        <meta property="fc:frame:button:1:target" content=" http://353a-85-76-103-9.ngrok-free.app/forward">
-        
-        <meta property="fc:frame:button:2" content="Back">
-        <meta property="fc:frame:button:2:action" content="post">
-        <meta property="fc:frame:button:2:target" content=" http://353a-85-76-103-9.ngrok-free.app/back">
-
-        <meta property="fc:frame:button:3" content="Stop">
-        <meta property="fc:frame:button:3:action" content="post">
-        <meta property="fc:frame:button:3:target" content=" http://353a-85-76-103-9.ngrok-free.app/stop">
-
-    </head>
-    <body>
-        <h1>Tumbller Farcaster Frame Server</h1>
-        <p>This will run commands on Tumbller</p>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    return templates.TemplateResponse("fcframe.html", {
+        "request": request,
+        "fc_frame_image": "https://i.imgur.com/LH739Tc.png", # TODO: Take image from the static directory
+        "page_title": "Forward Command Sent to Tumbller",
+        "action": "forward",
+        "base_url": BASE_URL
+    })
 
 
-# endpoint /motor/back to send GET request to ip address of ESP32
 @app.post("/back")
-async def back1():
-    url = "http://tumbller/motor/back"
+async def back1(request: Request):
+    url = f"{TUMBLLER_BASE_URL}/motor/back"
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Simple OG Tags Example</title>
-        <!-- Open Graph meta tags -->
-        <meta property="og:title" content="Simple OG Tags Example">
-        <!-- meta property="og:image" content="https://i.imgur.com/xjRvaTK.png" -->
-
-        <!-- Farcaster frame meta tags -->
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://i.imgur.com/xjRvaTK.png">
-
-        <meta property="fc:frame:button:1" content="Forward">
-        <meta property="fc:frame:button:1:action" content="post">
-        <meta property="fc:frame:button:1:target" content=" http://353a-85-76-103-9.ngrok-free.app/forward">
-        
-        <meta property="fc:frame:button:2" content="Back">
-        <meta property="fc:frame:button:2:action" content="post">
-        <meta property="fc:frame:button:2:target" content=" http://353a-85-76-103-9.ngrok-free.app /back">
-
-        <meta property="fc:frame:button:3" content="Stop">
-        <meta property="fc:frame:button:3:action" content="post">
-        <meta property="fc:frame:button:3:target" content=" http://353a-85-76-103-9.ngrok-free.app/stop">
-
-    </head>
-    <body>
-        <h1>Tumbller Farcaster Frame Server</h1>
-        <p>This will run commands on Tumbller</p>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+    return templates.TemplateResponse("fcframe.html", {
+        "request": request,
+        "fc_frame_image": "https://i.imgur.com/xjRvaTK.png", # TODO: Take image from the static directory
+        "page_title": "Back Command Sent to Tumbller",
+        "action": "back",
+        "base_url": BASE_URL
+    })
 
 
-# endpoint /motor/stop to send GET request to ip address of ESP32
 @app.post("/stop")
-async def stop1():
-    url = "http://tumbller/motor/stop"
+async def stop1(request: Request):
+    url = f"{TUMBLLER_BASE_URL}/motor/stop"
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Simple OG Tags Example</title>
-        <!-- Open Graph meta tags -->
-        <meta property="og:title" content="Simple OG Tags Example">
-        <!-- meta property="og:image" content="https://i.imgur.com/WVi3q3d.jpeg" -->
-
-        <!-- Farcaster frame meta tags -->
-        <meta property="fc:frame" content="vNext" />
-        <meta property="fc:frame:image" content="https://i.imgur.com/WVi3q3d.jpeg">
-        
-        <meta property="fc:frame:button:1" content="Forward">
-        <meta property="fc:frame:button:1:action" content="post">
-        <meta property="fc:frame:button:1:target" content=" http://353a-85-76-103-9.ngrok-free.app/forward">
-        
-        <meta property="fc:frame:button:2" content="Back">
-        <meta property="fc:frame:button:2:action" content="post">
-        <meta property="fc:frame:button:2:target" content=" http://353a-85-76-103-9.ngrok-free.app/back">
-
-        <meta property="fc:frame:button:3" content="Stop">
-        <meta property="fc:frame:button:3:action" content="post">
-        <meta property="fc:frame:button:3:target" content=" http://353a-85-76-103-9.ngrok-free.app/stop">
-
-    </head>
-    <body>
-        <h1>Tumbller Farcaster Frame Server</h1>
-        <p>This will run commands on Tumbller</p>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
-
-# endpoint /sensor/ht to send GET request to ip address of ESP32
-@app.post("/sensor/ht")
-async def sensor_ht():
-    url = "http://tumbller/sensor/ht"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-    return HTMLResponse(content=response.text)
+    return templates.TemplateResponse("fcframe.html", {
+        "request": request,
+        "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg", # TODO: Take image from the static directory
+        "page_title": "Stop Command Sent to Tumbller",
+        "action": "stop",
+        "base_url": BASE_URL
+    })

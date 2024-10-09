@@ -26,7 +26,7 @@ templates = Jinja2Templates(directory=Path(BASE_DIR, 'templates'))
 logger.debug(f"Templates directory: {Path(BASE_DIR, 'templates')}")
 
 # Define the base URL for all buttons
-BASE_URL = "https://6fb7-85-76-113-250.ngrok-free.app"
+BASE_URL = "https://6251-85-76-113-250.ngrok-free.app"
 
 # Define the base URL for the Tumbller device
 TUMBLLER_BASE_URL = "http://tumbller.local"
@@ -41,6 +41,9 @@ AMOUNT = 1  # Fixed amount of 1 USDC
 
 # Keep track of whether the payment was successful
 payment_successful = False
+
+# List to store transaction IDs
+transaction_ids = []
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -160,7 +163,6 @@ async def pay():
             logger.error(f"HTTP error occurred: {e}")
             raise HTTPException(status_code=e.response.status_code, detail="Transaction failed")
 
-
 @app.post("/callback")
 async def transaction_callback(request: Request):
     """
@@ -172,13 +174,16 @@ async def transaction_callback(request: Request):
     payload = await request.json()
     logger.info(f"Received callback payload: {payload}")
 
-    # Check if the payment was successful
-    # You'll need to determine the exact structure of the payload
-    if payload.get('status') == 'success':  # Adjust this condition based on the actual payload
+    # Check if the payment was successful by looking for transactionId
+    untrusted_data = payload.get('untrustedData', {})
+    transaction_id = untrusted_data.get('transactionId')
+
+    if transaction_id:
         payment_successful = True
-        logger.info("Payment confirmed as successful")
+        transaction_ids.append(transaction_id)
+        logger.info(f"Payment confirmed as successful. Transaction ID: {transaction_id}")
     else:
-        logger.warning("Payment not confirmed as successful")
+        logger.warning("Payment not confirmed as successful. No transaction ID found.")
 
     # Return a new Farcaster frame indicating the result
     if payment_successful:
@@ -216,41 +221,77 @@ async def transaction_callback(request: Request):
         </html>
         """)
 
+async def send_tumbller_command(command: str):
+    """
+    Send a command to the Tumbller device and handle potential errors.
+    """
+    url = f"{TUMBLLER_BASE_URL}/motor/{command}"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10.0)  # 5 seconds timeout
+        response.raise_for_status()
+        return True, "Command sent successfully"
+    except httpx.TimeoutException:
+        logger.error(f"Timeout while sending {command} command to Tumbller")
+        return False, "Tumbller device not responding"
+    except httpx.HTTPStatusError as exc:
+        logger.error(f"HTTP error {exc.response.status_code} while sending {command} command to Tumbller")
+        return False, f"Tumbller device returned error: {exc.response.status_code}"
+    except httpx.RequestError as exc:
+        logger.error(f"An error occurred while sending {command} command to Tumbller: {exc}")
+        return False, "Unable to communicate with Tumbller device"
+
 @app.post("/forward")
 async def forward1(request: Request):
-    url = f"{TUMBLLER_BASE_URL}/motor/forward"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
+    success, message = await send_tumbller_command("forward")
+    status_image = "https://i.imgur.com/LH739Tc.png" if success else "https://i.imgur.com/WVi3q3d.jpeg"
     return templates.TemplateResponse("control_buttons.html", {
         "request": request,
-        "fc_frame_image": "https://i.imgur.com/LH739Tc.png",
-        "page_title": "Forward Command Sent to Tumbller",
+        "fc_frame_image": status_image,
+        "page_title": f"Forward Command: {message}",
         "base_url": BASE_URL
     })
 
 @app.post("/back")
 async def back1(request: Request):
-    url = f"{TUMBLLER_BASE_URL}/motor/back"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
+    success, message = await send_tumbller_command("back")
+    status_image = "https://i.imgur.com/xjRvaTK.png" if success else "https://i.imgur.com/WVi3q3d.jpeg"
     return templates.TemplateResponse("control_buttons.html", {
         "request": request,
-        "fc_frame_image": "https://i.imgur.com/xjRvaTK.png",
-        "page_title": "Back Command Sent to Tumbller",
+        "fc_frame_image": status_image,
+        "page_title": f"Back Command: {message}",
         "base_url": BASE_URL
     })
 
 @app.post("/stop")
 async def stop1(request: Request):
-    url = f"{TUMBLLER_BASE_URL}/motor/stop"
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
+    success, message = await send_tumbller_command("stop")
+    status_image = "https://i.imgur.com/WVi3q3d.jpeg" if success else "https://i.imgur.com/WVi3q3d.jpeg"
     return templates.TemplateResponse("control_buttons.html", {
         "request": request,
-        "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-        "page_title": "Stop Command Sent to Tumbller",
+        "fc_frame_image": status_image,
+        "page_title": f"Stop Command: {message}",
         "base_url": BASE_URL
     })
+
+@app.get("/transactions", response_class=HTMLResponse)
+async def get_transactions(request: Request):
+    """
+    Endpoint to view all stored transaction IDs.
+    """
+    transactions_html = "<br>".join(transaction_ids)
+    return HTMLResponse(content=f"""
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Transaction IDs</title>
+      </head>
+      <body>
+        <h1>Stored Transaction IDs:</h1>
+        <p>{transactions_html}</p>
+      </body>
+    </html>
+    """)
 
 if __name__ == "__main__":
     logger.debug(f"SSL key file: {Path(BASE_DIR, 'key.pem')}")

@@ -8,6 +8,9 @@ import urllib.parse
 import uvicorn
 import logging
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+import os
+
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,7 +29,7 @@ templates = Jinja2Templates(directory=Path(BASE_DIR, 'templates'))
 logger.debug(f"Templates directory: {Path(BASE_DIR, 'templates')}")
 
 # Define the base URL for all buttons
-BASE_URL = "https://6251-85-76-113-250.ngrok-free.app"
+BASE_URL = "https://a10d-85-76-113-250.ngrok-free.app"
 
 # Define the base URL for the Tumbller device
 TUMBLLER_BASE_URL = "http://tumbller.local"
@@ -34,8 +37,11 @@ TUMBLLER_BASE_URL = "http://tumbller.local"
 # Paycaster API base URL
 PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"  # Ensure this is HTTPS
 
-# Define your API key and default transaction values
-API_KEY = "actual-key"  # Replace with your actual API key
+# Load API key from .env file
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY not found in .env file")
+
 TOKEN = "usdc"  # ERC20 token to be used
 AMOUNT = 1  # Fixed amount of 1 USDC
 

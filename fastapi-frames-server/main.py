@@ -19,6 +19,12 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent
 logger.debug(f"BASE_DIR: {BASE_DIR}")
 
+
+from pathlib import Path
+
+env_path = BASE_DIR / '.env'
+load_dotenv(dotenv_path=env_path)
+
 app = FastAPI()
 
 # Mount the static directory to serve images

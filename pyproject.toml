@@ -10,10 +10,12 @@ authors = [{"name" = "Anuraj", "email" = "anuraj-rp@users.noreply.github.com"}]
 readme = "README.md"
 requires-python = ">= 3.10"
 dependencies = [
+  "beautifulsoup4",
   "fastapi==0.110.0",
-  "uvicorn==0.29.0",
   "httpx==0.27.0",
+  "jinja2",
   "sqlalchemy==2.0.30",
+  "uvicorn==0.29.0",
 ]
 
 [project.optional-dependencies]

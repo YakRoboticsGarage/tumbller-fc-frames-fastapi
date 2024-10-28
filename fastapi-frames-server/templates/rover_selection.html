@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Select a Rover</title>
+    <meta property="og:title" content="Select a Rover" />
+    <meta property="og:image" content="{{ fc_frame_image }}" />
+    <meta name="fc:frame" content="vNext" />
+    <meta name="fc:frame:image" content="{{ fc_frame_image }}" />
+    <meta name="fc:frame:image:aspect_ratio" content="1.91:1" />
+    <meta name="fc:frame:button:1" content="Rover A {% if rover_a_available %}(Available){% else %}(Busy){% endif %}" />
+    <meta name="fc:frame:button:1:action" content="post" />
+    <meta name="fc:frame:button:1:target" content="{{ base_url }}/select_rover/A" />
+    <meta name="fc:frame:button:2" content="Rover B {% if rover_b_available %}(Available){% else %}(Busy){% endif %}" />
+    <meta name="fc:frame:button:2:action" content="post" />
+    <meta name="fc:frame:button:2:target" content="{{ base_url }}/select_rover/B" />
+  </head>
+  <body>
+    <h1>Choose Your Rover</h1>
+  </body>
+</html>

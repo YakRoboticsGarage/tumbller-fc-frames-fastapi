@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Rover Busy</title>
+    <meta property="og:title" content="Rover Busy" />
+    <meta property="og:image" content="{{ fc_frame_image }}" />
+    <meta name="fc:frame" content="vNext" />
+    <meta name="fc:frame:image" content="{{ fc_frame_image }}" />
+    <meta name="fc:frame:image:aspect_ratio" content="1.91:1" />
+    <meta name="fc:frame:button:1" content="Return to Selection" />
+    <meta name="fc:frame:button:1:action" content="post" />
+    <meta name="fc:frame:button:1:target" content="{{ base_url }}" />
+    <meta name="fc:frame:button:2" content="⏱ {{ time_left }}s" />
+  </head>
+  <body>
+    <h1>Rover {{ rover_id }} is currently busy</h1>
+    <p>Please try again in {{ time_left }} seconds</p>
+  </body>
+</html>

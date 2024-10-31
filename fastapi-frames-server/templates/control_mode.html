@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Control Mode - Rover {{ rover_id }}</title>
+    <meta property="og:title" content="Select Control Mode" />
+    <meta property="og:image" content="{{ fc_frame_image }}" />
+    <meta name="fc:frame" content="vNext" />
+    <meta name="fc:frame:image" content="{{ fc_frame_image }}" />
+    <meta name="fc:frame:image:aspect_ratio" content="1.91:1" />
+    <meta name="fc:frame:button:1" content="Forward/Back" />
+    <meta name="fc:frame:button:1:action" content="post" />
+    <meta name="fc:frame:button:1:target" content="{{ base_url }}/{{ rover_id }}/control/fb" />
+    <meta name="fc:frame:button:2" content="Left/Right" />
+    <meta name="fc:frame:button:2:action" content="post" />
+    <meta name="fc:frame:button:2:target" content="{{ base_url }}/{{ rover_id }}/control/lr" />
+    <meta name="fc:frame:button:3" content="⏱ {{ time_left }}" />
+    <meta name="fc:frame:button:3:action" content="post" />
+    <meta name="fc:frame:button:3:target" content="{{ base_url }}/{{ rover_id }}/update_time/control" />
+  </head>
+  <body>
+    <h1>Control Rover {{ rover_id }}</h1>
+    {% if previous_command == "stop" %}
+    <p>Rover stopped. Choose your next control mode.</p>
+    {% else %}
+    <p>Choose your control mode</p>
+    {% endif %}
+  </body>
+</html>

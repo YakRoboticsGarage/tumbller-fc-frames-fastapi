@@ -1,8 +1,11 @@
-from fastapi import FastAPI, Request, HTTPException, Depends
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import FastAPI, Request, HTTPException, Depends, BackgroundTasks
+from fastapi.responses import RedirectResponse, HTMLResponse, FileResponse
+from contextlib import asynccontextmanager
+from datetime import datetime  
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
+import asyncio
 from pathlib import Path
 import urllib.parse
 import uvicorn
@@ -31,7 +34,57 @@ from pathlib import Path
 env_path = BASE_DIR / '.env'
 load_dotenv(dotenv_path=env_path)
 
-app = FastAPI()
+# Configuration
+TUMBLLER_CAMERA_URLS = {
+    "A": "http://tumbller-a.camera/getImage",  # Update with actual camera URLs
+    "B": "http://tumbller-a.camera/getImage"   # Update with actual camera URLs
+}
+
+async def take_picture(rover_id: str) -> bool:
+    """Take a picture from the specified rover's camera"""
+    try:
+        camera_url = TUMBLLER_CAMERA_URLS[rover_id]
+        async with httpx.AsyncClient() as client:
+            response = await client.get(camera_url)
+            response.raise_for_status()
+            
+            # Save the image
+            image_path = Path(BASE_DIR, "static", f"image{rover_id}.jpg")
+            image_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(image_path, 'wb') as f:
+                f.write(response.content)
+            
+            logger.info(f"Took picture for Rover {rover_id} at {datetime.now()}")
+            return True
+    except Exception as e:
+        logger.error(f"Error taking picture for Rover {rover_id}: {e}")
+        return False
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events"""
+    # Startup: Take initial pictures
+    logger.info("Starting up: Taking initial pictures")
+    for rover_id in ["A", "B"]:
+        success = await take_picture(rover_id)
+        if not success:
+            logger.error(f"Failed to take initial picture for Rover {rover_id}")
+            # Copy default image if available
+            default_image = Path(BASE_DIR, "static", "tumbllerImage.jpg")
+            if default_image.exists():
+                target_image = Path(BASE_DIR, "static", f"image{rover_id}.jpg")
+                target_image.write_bytes(default_image.read_bytes())
+    
+    yield  # Runtime: FastAPI runs here
+    
+    # Shutdown: Nothing specific needed for cleanup
+    logger.info("Shutting down")
+
+# Initialize FastAPI with lifespan
+app = FastAPI(lifespan=lifespan)
+
+# app = FastAPI()
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory=Path(BASE_DIR, 'static')), name="static")
@@ -45,7 +98,7 @@ def datetime_filter(timestamp: float) -> str:
 templates.env.filters["datetime"] = datetime_filter
 
 # Configuration
-BASE_URL = "https://01e7-85-76-119-212.ngrok-free.app"
+BASE_URL = "https://18f1-85-76-119-212.ngrok-free.app"
 TUMBLLER_BASE_URLS = {
     "A": "http://tumbller-a.local",
     "B": "http://tumbller-b.local"
@@ -130,17 +183,19 @@ async def root_get(request: Request):
     """Handle GET requests to root endpoint"""
     return await root_handler(request)
 
+
 @app.post("/")
 async def root_post(request: Request):
     """Handle POST requests to root endpoint"""
     return await root_handler(request)
 
+
 async def root_handler(request: Request):
     """Common handler for both GET and POST requests"""
     return templates.TemplateResponse("rover_selection.html", {
         "request": request,
-        "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-        "base_url": BASE_URL,
+        "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",  # Add slash after BASE_URL
+        "base_url": f"{BASE_URL}/",  # Add slash after BASE_URL for button targets
         "rover_a_available": rover_controls["A"].is_available(),
         "rover_b_available": rover_controls["B"].is_available()
     })
@@ -158,7 +213,7 @@ async def select_rover(rover_id: str, request: Request):
         time_left = rover_controls[rover_id].get_time_left()
         return templates.TemplateResponse("waiting.html", {
             "request": request,
-            "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
+            "fc_frame_image": f"/static/tumbllerImage.jpg",
             "base_url": BASE_URL,
             "rover_id": rover_id,
             "time_left": time_left
@@ -246,8 +301,8 @@ async def transaction_callback(rover_id: str, request: Request, db: Session = De
                 logger.info(f"Payment confirmed for Rover {rover_id}. Transaction ID: {transaction_id}, User: {user}")
                 return templates.TemplateResponse("control_mode.html", {
                     "request": request,
-                    "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-                    "base_url": BASE_URL,
+                    "fc_frame_image": f"{BASE_URL}/static/image{rover_id}.jpg",  # Updated image path
+                    "base_url": f"{BASE_URL}/",  # Add trailing slash
                     "rover_id": rover_id,
                     "time_left": rover_controls[rover_id].get_time_left()
                 })
@@ -255,8 +310,8 @@ async def transaction_callback(rover_id: str, request: Request, db: Session = De
                 logger.warning(f"Rover {rover_id} is not available. User: {user}")
                 return templates.TemplateResponse("waiting.html", {
                     "request": request,
-                    "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-                    "base_url": BASE_URL,
+                    "fc_frame_image": f"{BASE_URL}/static/image{rover_id}.jpg",  # Updated image path
+                    "base_url": f"{BASE_URL}/",  # Add trailing slash
                     "rover_id": rover_id,
                     "time_left": rover_controls[rover_id].get_time_left()
                 })
@@ -264,93 +319,112 @@ async def transaction_callback(rover_id: str, request: Request, db: Session = De
             logger.warning("Payment not confirmed as successful. Missing transaction ID or user.")
             return templates.TemplateResponse("payment_failed.html", {
                 "request": request,
-                "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-                "base_url": BASE_URL
+                "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",  # Updated image path
+                "base_url": f"{BASE_URL}/"  # Add trailing slash
             })
             
     except Exception as e:
         logger.error(f"Error processing callback: {str(e)}")
         return templates.TemplateResponse("payment_failed.html", {
             "request": request,
-            "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-            "base_url": BASE_URL
+            "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",  # Updated image path
+            "base_url": f"{BASE_URL}/"  # Add trailing slash
         })
-    
-
-@app.post("/{rover_id}/control")
-async def control_rover(rover_id: str, request: Request):
-    """Main control frame"""
-    if not _validate_session(rover_id):
-        return await root(request)
-    
-    return templates.TemplateResponse("control_mode.html", {
-        "request": request,
-        "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-        "base_url": BASE_URL,
-        "rover_id": rover_id,
-        "time_left": rover_controls[rover_id].get_time_left()
-    })
 
 
+#control mode endpoints
 @app.post("/{rover_id}/control/{mode}")
 async def control_mode(rover_id: str, mode: str, request: Request):
     """Handle specific control mode (fb or lr)"""
     if not _validate_session(rover_id):
-        return await root(request)
+        return await root_handler(request)
     
     template_name = "fb_control.html" if mode == "fb" else "lr_control.html"
     return templates.TemplateResponse(template_name, {
         "request": request,
-        "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-        "base_url": BASE_URL,
+        "fc_frame_image": f"{BASE_URL}/static/image{rover_id}.jpg",
+        "base_url": f"{BASE_URL}/",  # Make sure there's a trailing slash
         "rover_id": rover_id,
         "time_left": rover_controls[rover_id].get_time_left()
     })
 
 
+@app.post("/{rover_id}/pic")
+async def take_rover_picture(rover_id: str, request: Request):
+    """
+    Take new picture from rover's camera
+    Returns to the same frame user was on with new picture
+    """
+    if not _validate_session(rover_id):
+        return await root_handler(request)
+    
+    success = await take_picture(rover_id)
+    
+    # Get the referer URL to determine which frame to return to
+    referer = request.headers.get("referer", "")
+    
+    # Default to control_mode if can't determine frame
+    template_name = "control_mode.html"
+    
+    # Determine which frame to return to based on the referer URL
+    if "control/fb" in referer:
+        template_name = "fb_control.html"
+    elif "control/lr" in referer:
+        template_name = "lr_control.html"
+    
+    return templates.TemplateResponse(template_name, {
+        "request": request,
+        "fc_frame_image": f"{BASE_URL}/static/image{rover_id}.jpg",  # Use full URL path
+        "base_url": f"{BASE_URL}/",  # Make sure there's a trailing slash
+        "rover_id": rover_id,
+        "time_left": rover_controls[rover_id].get_time_left()
+    })
+
+
+
+# Movement and Picture Commands
 @app.post("/{rover_id}/move/{direction}")
 async def move_rover(rover_id: str, direction: str, request: Request):
-    """Handle movement commands"""
-    logger.info(f"Received movement command: {direction} for rover {rover_id}")
-    
-    if not _validate_session(rover_id):
-        logger.warning(f"Invalid session for rover {rover_id}")
-        return await root(request)
+   """
+   Handle rover movement commands:
+   - forward, backward, left, right, stop
+   Returns to appropriate control mode after command
+   """
+   if not _validate_session(rover_id):
+       return await root_handler(request)
 
-    # Map directions to commands
-    command_map = {
-        "forward": "forward",
-        "backward": "back",
-        "left": "left",
-        "right": "right",
-        "stop": "stop"
-    }
+   command_map = {
+       "forward": "forward",
+       "backward": "back", 
+       "left": "left",
+       "right": "right",
+       "stop": "stop"
+   }
+   
+   command = command_map.get(direction)
+   if not command:
+       raise HTTPException(status_code=400, detail="Invalid direction")
 
-    command = command_map.get(direction)
-    if not command:
-        logger.error(f"Invalid direction received: {direction}")
-        raise HTTPException(status_code=400, detail="Invalid direction")
-
-    # Send command to the rover
-    logger.info(f"Sending command {command} to rover {rover_id}")
-    success, message = await send_tumbller_command(rover_id, command)
-    logger.info(f"Command result: success={success}, message={message}")
-    
-    if direction == "stop":
-        # Double-check that stop command was sent
-        logger.info("Stop command requested, confirming stop was sent")
-        return templates.TemplateResponse("control_mode.html", {
-            "request": request,
-            "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
-            "base_url": BASE_URL,
-            "rover_id": rover_id,
-            "time_left": rover_controls[rover_id].get_time_left(),
-            "previous_command": "stop"
-        })
-    else:
-        # For other commands, return to appropriate control mode
-        mode = "fb" if direction in ["forward", "backward"] else "lr"
-        return await control_mode(rover_id, mode, request)
+   success, message = await send_tumbller_command(rover_id, command)
+   
+   if direction == "stop":
+       return templates.TemplateResponse("control_mode.html", {
+           "request": request,
+           "fc_frame_image": f"{BASE_URL}/static/image{rover_id}.jpg",  # Updated image path
+           "base_url": f"{BASE_URL}/",  # Add trailing slash
+           "rover_id": rover_id,
+           "time_left": rover_controls[rover_id].get_time_left(),
+           "previous_command": "stop"
+       })
+   else:
+       mode = "fb" if direction in ["forward", "backward"] else "lr"
+       return templates.TemplateResponse(f"{mode}_control.html", {
+           "request": request,
+           "fc_frame_image": f"{BASE_URL}/static/image{rover_id}.jpg",  # Updated image path
+           "base_url": f"{BASE_URL}/",  # Add trailing slash
+           "rover_id": rover_id,
+           "time_left": rover_controls[rover_id].get_time_left()
+       })
     
 
 async def send_tumbller_command(rover_id: str, command: str):
@@ -377,7 +451,8 @@ async def send_tumbller_command(rover_id: str, command: str):
         return False, f"Unable to communicate with Tumbller {rover_id}"
     
 
-@app.get("/transactions", response_class=HTMLResponse)
+# Utility Endpoints
+@app.get("/transactions")
 async def get_transactions(request: Request, db: Session = Depends(get_db)):
     """View transaction history"""
     transactions = db.query(Transaction).all()
@@ -396,7 +471,7 @@ async def update_time(rover_id: str, mode: str, request: Request):
     if mode == "fb":
         return templates.TemplateResponse("fb_control.html", {
             "request": request,
-            "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
+            "fc_frame_image": f"/static/tumbllerImage.jpg",
             "base_url": BASE_URL,
             "rover_id": rover_id,
             "time_left": rover_controls[rover_id].get_time_left()
@@ -404,7 +479,7 @@ async def update_time(rover_id: str, mode: str, request: Request):
     elif mode == "lr":
         return templates.TemplateResponse("lr_control.html", {
             "request": request,
-            "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
+            "fc_frame_image": f"/static/tumbllerImage.jpg",
             "base_url": BASE_URL,
             "rover_id": rover_id,
             "time_left": rover_controls[rover_id].get_time_left()
@@ -412,11 +487,12 @@ async def update_time(rover_id: str, mode: str, request: Request):
     else:
         return templates.TemplateResponse("control_mode.html", {
             "request": request,
-            "fc_frame_image": "https://i.imgur.com/WVi3q3d.jpeg",
+            "fc_frame_image": f"/static/tumbllerImage.jpg",
             "base_url": BASE_URL,
             "rover_id": rover_id,
             "time_left": rover_controls[rover_id].get_time_left()
         })
+    
 
 def _validate_session(rover_id: str) -> bool:
     """Validate if the session is still active"""
@@ -429,6 +505,7 @@ def _validate_session(rover_id: str) -> bool:
         return False
     
     return True
+
 
 if __name__ == "__main__":
     logger.debug(f"SSL key file: {Path(BASE_DIR, 'key.pem')}")

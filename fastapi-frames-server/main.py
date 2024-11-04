@@ -24,6 +24,9 @@ import uuid
 import glob
 from PIL import Image, ImageDraw, ImageFont
 import io
+from config import TUMBLLER_CAMERA_URLS, BASE_URL, TUMBLLER_BASE_URLS
+# Application constants
+SESSION_DURATION = 120  # Session duration in seconds (2 minutes)
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -39,18 +42,7 @@ from pathlib import Path
 env_path = BASE_DIR / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# Configuration
-TUMBLLER_CAMERA_URLS = {
-    "A": "http://roverA-cam.local/getImage",  # Update with actual camera URLs
-    "B": "http://roverB-cam.local/getImage"   # Update with actual camera URLs
-}
 
-# Configuration
-BASE_URL = "https://ngrok-ip.ngrok-free.app"
-TUMBLLER_BASE_URLS = {
-    "A": "http://tumbller-a.local",
-    "B": "http://tumbller-b.local"
-}
 PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"
 
 # Load environment variables
@@ -316,7 +308,7 @@ class RoverControl:
         self.transaction_id: Optional[str] = None
         self.start_time: float = 0
         self.user: Optional[str] = None
-        self.session_duration: int = 300  # 5 minutes
+        self.session_duration: int = SESSION_DURATION
 
     def is_available(self) -> bool:
         if not self.transaction_id:
@@ -391,12 +383,13 @@ async def select_rover(rover_id: str, request: Request):
             "time_left": time_left
         })
 
+
 @app.post("/pay/{rover_id}")
 async def pay(rover_id: str, request: Request):
     """Payment initiation endpoint"""
-    sender = "anurajenp"
     receiver = "infinity-rover"
-
+    sender = "anurajenp"  # We'll keep a default sender since FID comes in callback
+    
     query_params = {
         "key": API_KEY,
         "sender": sender,
@@ -404,11 +397,11 @@ async def pay(rover_id: str, request: Request):
         "token": TOKEN,
         "receiver": receiver
     }
-
+    
     callback_url = f"{BASE_URL}/callback/{rover_id}"
     encoded_callback = urllib.parse.quote(callback_url)
     query_params["callback"] = encoded_callback
-
+    
     async with httpx.AsyncClient(follow_redirects=True) as client:
         try:
             response = await client.get(PAYCASTER_API_URL, params=query_params)
@@ -436,10 +429,11 @@ async def pay(rover_id: str, request: Request):
                 "fc_frame_button_action": fc_frame_button_action,
                 "fc_frame_button_target": fc_frame_button_target
             })
+            
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error occurred: {e}")
             raise HTTPException(status_code=e.response.status_code, detail="Transaction failed")
-        
+
 
 @app.post("/callback/{rover_id}")
 async def transaction_callback(rover_id: str, request: Request, db: Session = Depends(get_db)):
@@ -451,7 +445,7 @@ async def transaction_callback(rover_id: str, request: Request, db: Session = De
 
         frame_data = payload.get("untrustedData", {})
         transaction_id = frame_data.get("transactionId")
-        user = frame_data.get("fid")
+        user = frame_data.get("fid")  # This is where we get the FID
 
         if transaction_id and user:
             new_transaction = Transaction(

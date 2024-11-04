@@ -10,6 +10,7 @@ from pathlib import Path
 import urllib.parse
 import uvicorn
 import logging
+from logging.handlers import RotatingFileHandler
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
@@ -44,6 +45,84 @@ TUMBLLER_CAMERA_URLS = {
     "B": "http://roverB-cam.local/getImage"   # Update with actual camera URLs
 }
 
+# Configuration
+BASE_URL = "https://ngrok-ip.ngrok-free.app"
+TUMBLLER_BASE_URLS = {
+    "A": "http://tumbller-a.local",
+    "B": "http://tumbller-b.local"
+}
+PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"
+
+# Load environment variables
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise ValueError("API_KEY not found in .env file")
+
+TOKEN = "usdc"
+AMOUNT = 1
+
+# Database setup
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+# Set up logging configuration
+def setup_logging(debug_mode: bool = False):
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # Set up the root logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG if debug_mode else logging.INFO)
+
+    # Clear any existing handlers
+    logger.handlers.clear()
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    console_handler.setLevel(logging.DEBUG if debug_mode else logging.INFO)
+    logger.addHandler(console_handler)
+
+    # File handler for debug logs
+    if debug_mode:
+        debug_file_handler = RotatingFileHandler(
+            LOGS_DIR / 'debug.log',
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5,
+            encoding='utf-8'
+        )
+        debug_file_handler.setFormatter(formatter)
+        debug_file_handler.setLevel(logging.DEBUG)
+        logger.addHandler(debug_file_handler)
+
+    # File handler for errors (always active)
+    error_file_handler = RotatingFileHandler(
+        LOGS_DIR / 'error.log',
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    error_file_handler.setFormatter(formatter)
+    error_file_handler.setLevel(logging.ERROR)
+    logger.addHandler(error_file_handler)
+
+    return logger
+
+# Initialize logging with debug flag
+DEBUG_MODE = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
+logger = setup_logging(debug_mode=DEBUG_MODE)
+
+logger.debug(f"BASE_DIR: {BASE_DIR}")
+logger.debug(f"Debug mode: {DEBUG_MODE}")
 
 # Add function to get latest image for a rover
 def get_latest_rover_image(rover_id: str) -> str:
@@ -212,28 +291,6 @@ def datetime_filter(timestamp: float) -> str:
 
 templates.env.filters["datetime"] = datetime_filter
 
-# Configuration
-BASE_URL = "https://ngrok-ip.ngrok-free.app"
-TUMBLLER_BASE_URLS = {
-    "A": "http://tumbller-a.local",
-    "B": "http://tumbller-b.local"
-}
-PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"
-
-# Load environment variables
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-if not API_KEY:
-    raise ValueError("API_KEY not found in .env file")
-
-TOKEN = "usdc"
-AMOUNT = 1
-
-# Database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
 
 class Transaction(Base):
     __tablename__ = "transactions"

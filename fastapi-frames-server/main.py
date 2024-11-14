@@ -22,9 +22,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 import uuid
 import glob
+import json
 from PIL import Image, ImageDraw, ImageFont
 import io
 from config import TUMBLLER_CAMERA_URLS, BASE_URL, TUMBLLER_BASE_URLS
+from farcaster.client import Warpcast
+
 # Application constants
 SESSION_DURATION = 120  # Session duration in seconds (2 minutes)
 
@@ -115,6 +118,19 @@ logger = setup_logging(debug_mode=DEBUG_MODE)
 
 logger.debug(f"BASE_DIR: {BASE_DIR}")
 logger.debug(f"Debug mode: {DEBUG_MODE}")
+
+# Get mnemonic from environment variables
+MNEMONIC_ENV_VAR = os.getenv("MNEMONIC_ENV_VAR")
+if not MNEMONIC_ENV_VAR:
+    raise ValueError("MNEMONIC_ENV_VAR not found in .env file")
+
+# Create Warpcast client with mnemonic
+try:
+    warpcast_client = Warpcast(mnemonic=MNEMONIC_ENV_VAR)
+    logger.info("Successfully initialized Warpcast client")
+except Exception as e:
+    logger.error(f"Failed to initialize Warpcast client: {e}")
+    raise
 
 # Add function to get latest image for a rover
 def get_latest_rover_image(rover_id: str) -> str:
@@ -350,8 +366,33 @@ async def root_get(request: Request):
 
 @app.post("/")
 async def root_post(request: Request):
-    """Handle POST requests to root endpoint"""
-    return await root_handler(request)
+    """Handle POST requests to root endpoint with Frame data"""
+    try:
+        # Get the Frame data from the request
+        body = await request.body()
+        logger.debug(f"Root POST raw body: {body}")
+        
+        payload = await request.json()
+        logger.debug(f"Root POST payload: {payload}")
+        
+        # Extract FID from untrustedData
+        frame_data = payload.get("untrustedData", {})
+        user_fid = frame_data.get("fid")
+        
+        logger.info(f"Root POST received FID: {user_fid}")
+        
+        return templates.TemplateResponse("rover_selection.html", {
+            "request": request,
+            "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",
+            "base_url": f"{BASE_URL}/",
+            "rover_a_available": rover_controls["A"].is_available(),
+            "rover_b_available": rover_controls["B"].is_available(),
+            "user_fid": user_fid  # Pass the FID to the template
+        })
+    except Exception as e:
+        logger.error(f"Error in root_post: {str(e)}", exc_info=True)
+        # Fallback to default response
+        return await root_handler(request)
 
 
 async def root_handler(request: Request):
@@ -364,76 +405,146 @@ async def root_handler(request: Request):
         "rover_b_available": rover_controls["B"].is_available()
     })
 
+
 @app.post("/select_rover/{rover_id}")
 async def select_rover(rover_id: str, request: Request):
-    """Handle rover selection"""
-    if rover_id not in rover_controls:
-        raise HTTPException(status_code=400, detail="Invalid rover selection")
-
-    if rover_controls[rover_id].is_available():
-        # Pass the request object to pay function
-        return await pay(rover_id, request)
-    else:
-        time_left = rover_controls[rover_id].get_time_left()
-        return templates.TemplateResponse("waiting.html", {
-            "request": request,
-            "fc_frame_image": f"/static/tumbllerImage.jpg",
-            "base_url": BASE_URL,
-            "rover_id": rover_id,
-            "time_left": time_left
-        })
-
-
-@app.post("/pay/{rover_id}")
-async def pay(rover_id: str, request: Request):
-    """Payment initiation endpoint"""
-    receiver = "infinity-rover"
-    sender = "anurajenp"  # We'll keep a default sender since FID comes in callback
-    
-    query_params = {
-        "key": API_KEY,
-        "sender": sender,
-        "amount": AMOUNT,
-        "token": TOKEN,
-        "receiver": receiver
-    }
-    
-    callback_url = f"{BASE_URL}/callback/{rover_id}"
-    encoded_callback = urllib.parse.quote(callback_url)
-    query_params["callback"] = encoded_callback
-    
-    async with httpx.AsyncClient(follow_redirects=True) as client:
+    """Handle rover selection with FID to username conversion"""
+    try:
+        # Get the Frame data from the request
+        body = await request.body()
+        logger.debug(f"Select rover raw body: {body}")
+        
+        payload = await request.json()
+        logger.debug(f"Select rover payload: {payload}")
+        
+        # Extract FID from untrustedData
+        untrusted_data = payload.get("untrustedData", {})
+        user_fid = untrusted_data.get("fid")
+        
+        if not user_fid:
+            logger.error("No FID found in untrustedData")
+            raise HTTPException(status_code=400, detail="No FID found")
+        
         try:
-            response = await client.get(PAYCASTER_API_URL, params=query_params)
-            response.raise_for_status()
+            # Get user details from Farcaster
+            user = warpcast_client.get_user(user_fid)
+            sender = user.username
+            logger.info(f"Resolved FID {user_fid} to username: {sender}")
+        except Exception as e:
+            logger.error(f"Error getting username for FID {user_fid}: {e}")
+            # Fall back to using FID if username lookup fails
+            sender = str(user_fid)
             
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            og_title = soup.find('meta', property='og:title')['content'] if soup.find('meta', property='og:title') else None
-            fc_frame_image = soup.find('meta', attrs={'name': 'fc:frame:image'})['content'] if soup.find('meta', attrs={'name': 'fc:frame:image'}) else None
-            fc_frame_button = soup.find('meta', attrs={'name': 'fc:frame:button:1'})['content'] if soup.find('meta', attrs={'name': 'fc:frame:button:1'}) else None
-            fc_frame_button_action = soup.find('meta', attrs={'name': 'fc:frame:button:1:action'})['content'] if soup.find('meta', attrs={'name': 'fc:frame:button:1:action'}) else None
-            fc_frame_button_target = soup.find('meta', attrs={'name': 'fc:frame:button:1:target'})['content'] if soup.find('meta', attrs={'name': 'fc:frame:button:1:target'}) else None
-            
-            fc_frame_post_url = soup.find('meta', attrs={'name': 'fc:frame:post_url'})['content'] if soup.find('meta', attrs={'name': 'fc:frame:post_url'}) else None
-            if fc_frame_post_url:
-                decoded_url = urllib.parse.unquote(fc_frame_post_url)
-                fc_frame_post_url = urllib.parse.quote(decoded_url, safe=':/')
-            
-            return templates.TemplateResponse("payment_frame.html", {
+        if rover_id not in rover_controls:
+            raise HTTPException(status_code=400, detail="Invalid rover selection")
+
+        if rover_controls[rover_id].is_available():
+            return await pay(rover_id=rover_id, request=request, user_fid=sender)
+        else:
+            time_left = rover_controls[rover_id].get_time_left()
+            return templates.TemplateResponse("waiting.html", {
                 "request": request,
-                "og_title": og_title,
-                "fc_frame_image": fc_frame_image,
-                "fc_frame_post_url": fc_frame_post_url,
-                "fc_frame_button": fc_frame_button,
-                "fc_frame_button_action": fc_frame_button_action,
-                "fc_frame_button_target": fc_frame_button_target
+                "fc_frame_image": f"/static/tumbllerImage.jpg",
+                "base_url": BASE_URL,
+                "rover_id": rover_id,
+                "time_left": time_left
             })
             
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP error occurred: {e}")
-            raise HTTPException(status_code=e.response.status_code, detail="Transaction failed")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON data")
+    except Exception as e:
+        logger.error(f"Error in select_rover: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
 
+@app.post("/pay/{rover_id}")
+async def pay(rover_id: str, request: Request, user_fid: str):
+    """Payment initiation endpoint"""
+    try:
+        logger.info(f"Pay endpoint received user_fid: {user_fid}")
+        
+        # Use the provided FID directly as sender
+        sender = user_fid
+        receiver = "infinity-rover"
+        
+        # Construct the callback URL
+        callback_url = f"{BASE_URL}/callback/{rover_id}"
+        
+        # Construct query parameters
+        query_params = {
+            "key": API_KEY,
+            "sender": sender,  # This will be the FID from untrustedData
+            "amount": AMOUNT,
+            "token": TOKEN,
+            "receiver": receiver,
+            "callback": callback_url
+        }
+        
+        logger.debug(f"PayCaster query params: {query_params}")
+        
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            try:
+                response = await client.get(
+                    PAYCASTER_API_URL,
+                    params=query_params,
+                    timeout=30.0,
+                    headers={
+                        "Accept": "text/html,application/xhtml+xml",
+                        "User-Agent": "Mozilla/5.0 FastAPI/0.95.0"
+                    }
+                )
+                
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                frame_data = {
+                    'og_title': 'Pay for Rover Control',
+                    'fc_frame': 'vNext',
+                    'fc_frame_image': soup.find('meta', property='og:image')['content'] if soup.find('meta', property='og:image') else f"{BASE_URL}/static/tumbllerImage.jpg",
+                    'fc_frame_button': 'Pay 1 USDC',
+                    'fc_frame_button_action': 'tx',
+                    'fc_frame_button_target': soup.find('meta', attrs={'name': 'fc:frame:button:1:target'})['content'] if soup.find('meta', attrs={'name': 'fc:frame:button:1:target'}) else None,
+                    'fc_frame_post_url': callback_url
+                }
+                
+                logger.debug(f"Frame data prepared: {frame_data}")
+                
+                return templates.TemplateResponse(
+                    "payment_frame.html",
+                    {
+                        "request": request,
+                        **frame_data,
+                        "rover_id": rover_id,
+                        "user_fid": user_fid  # Pass the FID to the template
+                    }
+                )
+                
+            except httpx.HTTPStatusError as e:
+                logger.error(f"PayCaster HTTP error: {e}")
+                return templates.TemplateResponse("payment_frame.html", {
+                    "request": request,
+                    "og_title": "Payment Error",
+                    "fc_frame": "vNext",
+                    "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",
+                    "fc_frame_button": "Try Again",
+                    "fc_frame_post_url": f"{BASE_URL}/",
+                    "error_message": "Payment service temporarily unavailable"
+                })
+                
+    except Exception as e:
+        logger.error(f"Error in pay endpoint: {str(e)}", exc_info=True)
+        return templates.TemplateResponse("payment_frame.html", {
+            "request": request,
+            "og_title": "Error",
+            "fc_frame": "vNext",
+            "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",
+            "fc_frame_button": "Try Again",
+            "fc_frame_post_url": f"{BASE_URL}/",
+            "error_message": "An error occurred"
+        })
+    
 
 @app.post("/callback/{rover_id}")
 async def transaction_callback(rover_id: str, request: Request, db: Session = Depends(get_db)):

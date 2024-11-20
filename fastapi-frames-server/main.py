@@ -29,7 +29,7 @@ from config import TUMBLLER_CAMERA_URLS, BASE_URL, TUMBLLER_BASE_URLS
 from farcaster.client import Warpcast
 
 # Application constants
-SESSION_DURATION = 120  # Session duration in seconds (2 minutes)
+SESSION_DURATION = 180  # Session duration in seconds (3 minutes)
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)

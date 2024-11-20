@@ -1,6 +1,5 @@
-# tumbller-fc-frames-fastapi
+# FastAPI farcaster frames server for tumbller rover
 
-## FastAPI farcaster frames server for tumbller rover
 
 ## Setup
 
@@ -9,6 +8,7 @@
   * https://github.com/YakRoboticsGarage/tumbller-fc-frames-fastapi
   * https://github.com/YakRoboticsGarage/tumbller-esp32s3
   * https://github.com/YakRoboticsGarage/tumbller-esp-cam
+  
 * Both tumbller-esp32s3 and tumbller-esp-cam have WIFI_SSID and WIFI_PASSWORD hardcoded. Find them and replace with your own wifi credentials
 * Now we need to know the IPs of each of the ESPs and the computer this server will run on.
 * The ESP-CAM will spit out the IP on the serial port when connected to a serial terminal. You should see something like this on the serial terminal when you press the __RESET__ button (the right button when the camera is facing you). The ESP-CAM will fast blink in red color when it is trying to connect to WiFi and will blink in White when connected. 
@@ -43,6 +43,8 @@ TUMBLLER_URL_A=http://ESP-CAM-IP
 TUMBLLER_URL_B=http://ESP-CAM-IP
 MNEMONIC_ENV_VAR=FARCASTER-KEY
 ```
+## Running the frame server 
+
 * Replace each of the variable with the correct value.
 * ngrok  url is got after starting ngrok with 
   * `ngrok http 8080`

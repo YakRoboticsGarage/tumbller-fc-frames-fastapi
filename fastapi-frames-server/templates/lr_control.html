@@ -9,16 +9,16 @@
     <meta name="fc:frame:image:aspect_ratio" content="1.91:1" />
     <meta name="fc:frame:button:1" content="Left" />
     <meta name="fc:frame:button:1:action" content="post" />
-    <meta name="fc:frame:button:1:target" content="{{ base_url }}/{{ rover_id }}/move/left" />
+    <meta name="fc:frame:button:1:target" content="{{ base_url }}{{ rover_id }}/move/left" />
     <meta name="fc:frame:button:2" content="Right" />
     <meta name="fc:frame:button:2:action" content="post" />
-    <meta name="fc:frame:button:2:target" content="{{ base_url }}/{{ rover_id }}/move/right" />
-    <meta name="fc:frame:button:3" content="Stop" />
+    <meta name="fc:frame:button:2:target" content="{{ base_url }}{{ rover_id }}/move/right" />
+    <meta name="fc:frame:button:3" content="Switch" />
     <meta name="fc:frame:button:3:action" content="post" />
-    <meta name="fc:frame:button:3:target" content="{{ base_url }}/{{ rover_id }}/move/stop" />
-    <meta name="fc:frame:button:4" content="⏱ {{ time_left }}" />
+    <meta name="fc:frame:button:3:target" content="{{ base_url }}{{ rover_id }}/move/stop" />
+    <meta name="fc:frame:button:4" content="Pic" />
     <meta name="fc:frame:button:4:action" content="post" />
-    <meta name="fc:frame:button:4:target" content="{{ base_url }}/{{ rover_id }}/update_time/lr" />
+    <meta name="fc:frame:button:4:target" content="{{ base_url }}{{ rover_id }}/pic" />
   </head>
   <body>
     <h1>Left/Right Control - Rover {{ rover_id }}</h1>

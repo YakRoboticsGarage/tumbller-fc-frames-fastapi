@@ -394,10 +394,9 @@ async def mini_app_manifest(request: Request):
         "farcaster.json",
         {
             "request": request,
-            "fqdn": FQDN,
-            "jfs_header": "abc",
-            "jfs_payload": "abc",
-            "jfs_signature": "abc",
+            "jfs_header": helpers.make_jfs_header(FID, CUSTODY_ADDRESS),
+            "jfs_payload": helpers.make_jfs_payload(FQDN),
+            "jfs_signature": helpers.make_jfs_signature(),
             "base_url": BASE_URL,
         },
     )

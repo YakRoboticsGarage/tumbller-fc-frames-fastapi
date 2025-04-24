@@ -25,8 +25,7 @@ import glob
 import json
 from PIL import Image, ImageDraw, ImageFont
 import io
-from config import TUMBLLER_CAMERA_URLS, BASE_URL, TUMBLLER_BASE_URLS
-from farcaster.client import Warpcast
+from farcaster import Warpcast
 
 # Application constants
 SESSION_DURATION = 180  # Session duration in seconds (3 minutes)
@@ -50,6 +49,10 @@ PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"
 
 # Load environment variables
 load_dotenv()
+
+
+from config import TUMBLLER_CAMERA_URLS, BASE_URL, TUMBLLER_BASE_URLS
+
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     raise ValueError("API_KEY not found in .env file")

@@ -409,7 +409,7 @@ async def root(request: Request):
         request,
         "index.html",
         {
-            "base_url": f"https://{FQDN}",
+            "fqdn": FQDN,
         }
     )
 

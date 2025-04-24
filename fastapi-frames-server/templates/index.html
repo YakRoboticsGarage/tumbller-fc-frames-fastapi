@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="fc:frame" content='{"version":"next","imageUrl":"{{ base_url }}/static/icon.png","button":{"title":"🦬 Start","action":{"type":"launch_frame","name":"Yak Rover Tumbller","url":"{{ base_url }}","splashImageUrl":"{{ base_url }}/static/splash.png","splashBackgroundColor":"#f5f0ec"}}}' />
+    <title>Yak Rover Tumbller</title>
+  </head>
+  <body>
+    Hello
+    <div id="app"></div>
+    <script type="module">
+      import { sdk } from 'https://esm.sh/@farcaster/frame-sdk'
+      await sdk.actions.ready();
+    </script>
+  </body>
+</html>

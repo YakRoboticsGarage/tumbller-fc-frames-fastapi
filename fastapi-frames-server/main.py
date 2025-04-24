@@ -884,12 +884,18 @@ def _validate_session(rover_id: str) -> bool:
 
 
 if __name__ == "__main__":
-    logger.debug(f"SSL key file: {Path(BASE_DIR, 'key.pem')}")
-    logger.debug(f"SSL cert file: {Path(BASE_DIR, 'cert.pem')}")
-    uvicorn.run(
-        app,
+    config = dict(
+        app=app,
         host="0.0.0.0",
         port=8000,
-        ssl_keyfile=Path(BASE_DIR, "key.pem"),
-        ssl_certfile=Path(BASE_DIR, "cert.pem"),
     )
+    key_pem = Path(BASE_DIR, "key.pem")
+    cert_pem = Path(BASE_DIR, "cert.pem")
+    if key_pem.exists() and cert_pem.exists():
+        logger.debug(f"SSL key file: {Path(BASE_DIR, 'key.pem')}")
+        logger.debug(f"SSL cert file: {Path(BASE_DIR, 'cert.pem')}")
+        config.update(
+            ssl_keyfile=key_pem,
+            ssl_certfile=cert_pem,
+        )
+    uvicorn.run(**config)

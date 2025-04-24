@@ -51,7 +51,7 @@ PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"
 load_dotenv()
 
 
-from config import TUMBLLER_CAMERA_URLS, BASE_URL, TUMBLLER_BASE_URLS
+from config import TUMBLLER_CAMERA_URLS, BASE_URL, FQDN, TUMBLLER_BASE_URLS
 
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
@@ -379,6 +379,21 @@ rover_controls: Dict[str, RoverControl] = {"A": RoverControl(), "B": RoverContro
 
 
 # Routes
+@app.get("/.well-known/farcaster.json")
+async def mini_app_manifest(request: Request):
+    return templates.TemplateResponse(
+        "farcaster.json",
+        {
+            "request": request,
+            "fqdn": FQDN,
+            "jfs_header": "abc",
+            "jfs_payload": "abc",
+            "jfs_signature": "abc",
+            "base_url": BASE_URL,
+        },
+    )
+
+
 @app.get("/")
 async def root_get(request: Request):
     """Handle GET requests to root endpoint"""

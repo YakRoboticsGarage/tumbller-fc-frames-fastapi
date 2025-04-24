@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -44,8 +45,9 @@ current_config = CONFIG[ENV]
 
 # Export configuration variables
 TUMBLLER_CAMERA_URLS = current_config["TUMBLLER_CAMERA_URLS"]
-CUSTODY_ADDRESS = os.environ["CUSTODY_ADDRESS"]
-FID = os.environ["FID"]
 FQDN = os.environ["FQDN"]
 BASE_URL = current_config["BASE_URL"]
 TUMBLLER_BASE_URLS = current_config["TUMBLLER_BASE_URLS"]
+
+with open(os.environ["ACCOUNT_ASSOCIATION_FILE"]) as f:
+    ACCOUNT_ASSOCIATION = json.load(f)

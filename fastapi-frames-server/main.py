@@ -51,7 +51,16 @@ PAYCASTER_API_URL = "https://app.paycaster.co/api/customs/"
 load_dotenv()
 
 
-from config import TUMBLLER_CAMERA_URLS, BASE_URL, FQDN, TUMBLLER_BASE_URLS
+import helpers
+from config import (
+    TUMBLLER_CAMERA_URLS,
+    BASE_URL,
+    FQDN,
+    TUMBLLER_BASE_URLS,
+    FID,
+    CUSTODY_ADDRESS,
+)
+
 
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
@@ -395,12 +404,23 @@ async def mini_app_manifest(request: Request):
 
 
 @app.get("/")
+async def root(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "base_url": f"https://{FQDN}",
+        }
+    )
+
+
+@app.get("/v1")
 async def root_get(request: Request):
     """Handle GET requests to root endpoint"""
     return await root_handler(request)
 
 
-@app.post("/")
+@app.post("/v1")
 async def root_post(request: Request):
     """Handle POST requests to root endpoint with Frame data"""
     try:

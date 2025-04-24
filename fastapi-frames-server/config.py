@@ -44,6 +44,8 @@ current_config = CONFIG[ENV]
 
 # Export configuration variables
 TUMBLLER_CAMERA_URLS = current_config["TUMBLLER_CAMERA_URLS"]
+CUSTODY_ADDRESS = os.environ["CUSTODY_ADDRESS"]
+FID = os.environ["FID"]
 FQDN = os.environ["FQDN"]
 BASE_URL = current_config["BASE_URL"]
 TUMBLLER_BASE_URLS = current_config["TUMBLLER_BASE_URLS"]

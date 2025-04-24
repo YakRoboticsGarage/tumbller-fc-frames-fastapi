@@ -1,11 +1,4 @@
 {
-  "accountAssociation": {
-    {{ fqdn }}: {
-      "header": {{ jfs_header }},
-      "payload": {{ jfs_payload }},
-      "signature": {{ jfs_signature }},
-    }
-  },
   "frame": {
     "version": "1",
     "name": "Yak Rover Tumbller",

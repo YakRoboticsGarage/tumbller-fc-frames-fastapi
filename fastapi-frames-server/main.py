@@ -53,12 +53,11 @@ load_dotenv()
 
 import helpers
 from config import (
+    ACCOUNT_ASSOCIATION,
     TUMBLLER_CAMERA_URLS,
     BASE_URL,
     FQDN,
     TUMBLLER_BASE_URLS,
-    FID,
-    CUSTODY_ADDRESS,
 )
 
 
@@ -390,16 +389,18 @@ rover_controls: Dict[str, RoverControl] = {"A": RoverControl(), "B": RoverContro
 # Routes
 @app.get("/.well-known/farcaster.json")
 async def mini_app_manifest(request: Request):
-    return templates.TemplateResponse(
-        "farcaster.json",
-        {
-            "request": request,
-            "jfs_header": helpers.make_jfs_header(FID, CUSTODY_ADDRESS),
-            "jfs_payload": helpers.make_jfs_payload(FQDN),
-            "jfs_signature": helpers.make_jfs_signature(),
-            "base_url": BASE_URL,
-        },
-    )
+    response = ACCOUNT_ASSOCIATION
+    response["frame"] = {
+        "version": "1",
+        "name": "Yak Rover Tumbller",
+        "subtitle": "Fractional Robotics",
+        "homeUrl": f"https://{FQDN}/",
+        "iconUrl": f"https://{FQDN}/static/icon.png",
+        "buttonTitle": "🦬 Start",
+        "splashBackgroundColor": "#f5f0ec",
+        "tags": ["rover", "robot", "yak", "collective"]
+    }
+    return response
 
 
 @app.get("/")

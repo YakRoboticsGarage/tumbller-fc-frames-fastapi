@@ -370,15 +370,27 @@ class RoverControl:
         self.start_time = time.time()
         self.user = user
 
-    def get_time_left(self) -> str:
+    def get_time_left(self, raw: bool = False) -> str | int:
+        """
+        Returns a formated string by default, e.g. 03:45
+
+        With `raw` set to True, returns the number of
+        seconds remaining, as an integer.
+        """
         if not self.transaction_id:
-            return "00:00"
+            if raw:
+                return 0
+            else:
+                return "00:00"
         elapsed = time.time() - self.start_time
         remaining = self.session_duration - elapsed
         remaining = max(0, int(remaining))
-        minutes = remaining // 60
-        seconds = remaining % 60
-        return f"{minutes:02d}:{seconds:02d}"
+        if raw:
+            return remaining
+        else:
+            minutes = remaining // 60
+            seconds = remaining % 60
+            return f"{minutes:02d}:{seconds:02d}"
 
     def clear_session(self):
         self.transaction_id = None

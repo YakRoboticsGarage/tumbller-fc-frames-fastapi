@@ -56,6 +56,7 @@ from config import (
     ACCOUNT_ASSOCIATION,
     TUMBLLER_CAMERA_URLS,
     BASE_URL,
+    ENV,
     FQDN,
     TUMBLLER_BASE_URLS,
 )
@@ -441,8 +442,6 @@ async def root_post(request: Request):
             "rover_selection.html",
             {
                 "request": request,
-                "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",
-                "base_url": f"{BASE_URL}/",
                 "rover_a_available": rover_controls["A"].is_available(),
                 "rover_b_available": rover_controls["B"].is_available(),
                 "user_fid": user_fid,  # Pass the FID to the template
@@ -460,8 +459,6 @@ async def root_handler(request: Request):
         "rover_selection.html",
         {
             "request": request,
-            "fc_frame_image": f"{BASE_URL}/static/tumbllerImage.jpg",  # Add slash after BASE_URL
-            "base_url": f"{BASE_URL}/",  # Add slash after BASE_URL for button targets
             "rover_a_available": rover_controls["A"].is_available(),
             "rover_b_available": rover_controls["B"].is_available(),
         },
@@ -472,20 +469,21 @@ async def root_handler(request: Request):
 async def select_rover(rover_id: str, request: Request):
     """Handle rover selection with FID to username conversion"""
     try:
-        # Get the Frame data from the request
-        body = await request.body()
-        logger.debug(f"Select rover raw body: {body}")
+        if rover_id not in rover_controls:
+            raise HTTPException(status_code=400, detail="Invalid rover selection")
 
-        payload = await request.json()
-        logger.debug(f"Select rover payload: {payload}")
+        form = await request.form()
 
-        # Extract FID from untrustedData
-        untrusted_data = payload.get("untrustedData", {})
-        user_fid = untrusted_data.get("fid")
+        user_fid = form.get("fid")
 
-        if not user_fid:
+        if not user_fid and ENV != "development":
             logger.error("No FID found in untrustedData")
             raise HTTPException(status_code=400, detail="No FID found")
+        elif not user_fid and ENV == "development":
+            logger.info("Detected development call without user FID. By passing payment.")
+            payment = False
+        else:
+            payment = True
 
         try:
             # Get user details from Farcaster
@@ -497,11 +495,22 @@ async def select_rover(rover_id: str, request: Request):
             # Fall back to using FID if username lookup fails
             sender = str(user_fid)
 
-        if rover_id not in rover_controls:
-            raise HTTPException(status_code=400, detail="Invalid rover selection")
-
         if rover_controls[rover_id].is_available():
-            return await pay(rover_id=rover_id, request=request, user_fid=sender)
+            if payment:
+                return await pay(rover_id=rover_id, request=request, user_fid=sender)
+            else:
+                rover_controls[rover_id].start_session("development", user_fid)
+                await take_picture(rover_id)
+                return templates.TemplateResponse(
+                    "control_mode.html",
+                    {
+                        "request": request,
+                        "fc_frame_image": get_image_url(BASE_URL, rover_id),
+                        "base_url": f"{BASE_URL}/",
+                        "rover_id": rover_id,
+                        "time_left": rover_controls[rover_id].get_time_left(),
+                    },
+                )
         else:
             time_left = rover_controls[rover_id].get_time_left()
             return templates.TemplateResponse(

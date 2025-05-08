@@ -27,9 +27,6 @@ from PIL import Image, ImageDraw, ImageFont
 import io
 from farcaster import Warpcast
 
-# Application constants
-SESSION_DURATION = 180  # Session duration in seconds (3 minutes)
-
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -66,8 +63,14 @@ API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     raise ValueError("API_KEY not found in .env file")
 
+# Application constants
+if ENV == "development":
+    SESSION_DURATION = 30
+else:
+    SESSION_DURATION = 180  # Session duration in seconds (3 minutes)
 TOKEN = "usdc"
 AMOUNT = 1
+
 
 # Database setup
 SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"

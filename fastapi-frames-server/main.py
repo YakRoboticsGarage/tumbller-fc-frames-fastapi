@@ -520,10 +520,11 @@ async def select_rover(rover_id: str, request: Request):
                     "control_mode.html",
                     {
                         "request": request,
-                        "fc_frame_image": get_image_url(BASE_URL, rover_id),
-                        "base_url": f"{BASE_URL}/",
+                        "fc_frame_image": get_image_url(FQDN, rover_id),
+                        "base_url": FQDN,
                         "rover_id": rover_id,
-                        "time_left": rover_controls[rover_id].get_time_left(),
+                        "time_left": rover_controls[rover_id].get_time_left(raw=True),
+                        "end_url": "/v1",
                     },
                 )
         else:
@@ -538,10 +539,6 @@ async def select_rover(rover_id: str, request: Request):
                     "time_left": time_left,
                 },
             )
-
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
-        raise HTTPException(status_code=400, detail="Invalid JSON data")
     except Exception as e:
         logger.error(f"Error in select_rover: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -721,7 +718,7 @@ async def transaction_callback(
 # control mode endpoints
 
 
-@app.post("/{rover_id}/control/{mode}")
+@app.post("/rover/{rover_id}/control/{mode}")
 async def control_mode(rover_id: str, mode: str, request: Request):
     """Handle specific control mode (fb or lr)"""
     if not _validate_session(rover_id):

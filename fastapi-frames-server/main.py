@@ -285,10 +285,10 @@ def get_image_url(base_url: str, rover_id: str) -> str:
     if latest_image:
         # Extract just the filename from the full path
         image_filename = os.path.basename(latest_image)
-        return f"{base_url}/static/{image_filename}"
+        return f"/static/{image_filename}"
     else:
         # Fallback to default image
-        return f"{base_url}/static/tumbllerImage.jpg"
+        return f"/static/tumbllerImage.jpg"
 
 
 @asynccontextmanager

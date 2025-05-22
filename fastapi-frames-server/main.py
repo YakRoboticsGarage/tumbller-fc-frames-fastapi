@@ -480,7 +480,7 @@ async def root_handler(request: Request):
     )
 
 
-@app.post("/select_rover/{rover_id}")
+@app.post("/v1/select_rover/{rover_id}")
 async def select_rover(rover_id: str, request: Request):
     """Handle rover selection with FID to username conversion"""
     try:
@@ -718,26 +718,26 @@ async def transaction_callback(
 # control mode endpoints
 
 
-@app.post("/rover/{rover_id}/control/{mode}")
+@app.post("/v1/rover/{rover_id}/control/{mode}")
 async def control_mode(rover_id: str, mode: str, request: Request):
     """Handle specific control mode (fb or lr)"""
     if not _validate_session(rover_id):
         return await root_handler(request)
 
-    template_name = "fb_control.html" if mode == "fb" else "lr_control.html"
+    template_name = "fb_control.html" if mode.lower() == "fb" else "lr_control.html"
     return templates.TemplateResponse(
         template_name,
         {
             "request": request,
             "fc_frame_image": get_image_url(BASE_URL, rover_id),
-            "base_url": f"{BASE_URL}/",
             "rover_id": rover_id,
-            "time_left": rover_controls[rover_id].get_time_left(),
+            "time_left": rover_controls[rover_id].get_time_left(raw=True),
+            "end_url": "/v1",
         },
     )
 
 
-@app.post("/{rover_id}/pic")
+@app.post("/v1/rover/{rover_id}/pic")
 async def take_rover_picture(rover_id: str, request: Request):
     """
     Take new picture from rover's camera
@@ -776,7 +776,7 @@ async def take_rover_picture(rover_id: str, request: Request):
 
 
 # Movement and Picture Commands
-@app.post("/{rover_id}/move/{direction}")
+@app.post("/v1/rover/{rover_id}/move/{direction}")
 async def move_rover(rover_id: str, direction: str, request: Request):
     if not _validate_session(rover_id):
         return await root_handler(request)

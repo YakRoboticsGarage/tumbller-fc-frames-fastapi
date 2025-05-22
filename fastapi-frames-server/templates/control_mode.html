@@ -23,16 +23,16 @@
     <p>Choose your control mode</p>
     {% endif %}
     <div id="controls">
-      <form action="/rover/{{ rover_id }}/control/fb" method="POST">
+      <form action="/v1/rover/{{ rover_id }}/control/fb" method="POST">
         <input type="submit" value="Move" />
       </form>
-      <form action="/rover/{{ rover_id }}/control/lr" method="POST">
+      <form action="/v1/rover/{{ rover_id }}/control/lr" method="POST">
         <input type="submit" value="Turn" />
       </form>
-      <form action="/rover/{{ rover_id }}/move/stop" method="POST">
+      <form action="/v1/rover/{{ rover_id }}/move/stop" method="POST">
         <input type="submit" value="Switch" />
       </form>
-      <form action="/rover/{{ rover_id }}/pic" method="POST">
+      <form action="/v1/rover/{{ rover_id }}/pic" method="POST">
         <input type="submit" value="Pic" />
       </form>
     </div>
@@ -41,6 +41,15 @@
     </div>
   </body>
   <script>
+    var pic = document.getElementById("frame-img");
+    document.getElementById("pic").onclick = function () {
+      window
+        .fetch("/v1/rover/{{ rover_id }}/pic", {method: "POST"})
+          .then((res) => res.json())
+          .then((body) => {
+              pic.src = body.fc_frame_image;
+          });
+    };
     window.onload = function() {
       var sec = {{ time_left }};
 
@@ -55,6 +64,6 @@
           window.location.href = "{{ end_url }}";
         }
       }, (sec + 2) * 1000);
-    }
+    };
   </script>
 </html>

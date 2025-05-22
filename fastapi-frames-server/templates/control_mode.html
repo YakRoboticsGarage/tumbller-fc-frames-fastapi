@@ -14,7 +14,7 @@
   <body>
     <h1>Rover {{ rover_id }}</h1>
     <div id="frame">
-      <img src="{{ fc_frame_image }}" width="80%"/>
+      <img src="{{ fc_frame_image }}" id="frame-img" width="80%"/>
     </div>
     <p>Time left: <span id="timer">{{ time_left }}</span> seconds</p>
     {% if previous_command == "stop" %}

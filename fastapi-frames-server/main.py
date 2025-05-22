@@ -788,8 +788,9 @@ async def move_rover(rover_id: str, direction: str, request: Request):
                 "fc_frame_image": get_image_url(BASE_URL, rover_id),
                 "base_url": f"{BASE_URL}/",
                 "rover_id": rover_id,
-                "time_left": rover_controls[rover_id].get_time_left(),
+                "time_left": rover_controls[rover_id].get_time_left(raw=True),
                 "previous_command": "stop",
+                "end_url": "/v1",
             },
         )
     else:
@@ -801,7 +802,8 @@ async def move_rover(rover_id: str, direction: str, request: Request):
                 "fc_frame_image": get_image_url(BASE_URL, rover_id),
                 "base_url": f"{BASE_URL}/",
                 "rover_id": rover_id,
-                "time_left": rover_controls[rover_id].get_time_left(),
+                "time_left": rover_controls[rover_id].get_time_left(raw=True),
+                "end_url": "/v1",
             },
         )
 
@@ -860,7 +862,8 @@ async def update_time(rover_id: str, mode: str, request: Request):
                 "fc_frame_image": f"/static/tumbllerImage.jpg",
                 "base_url": BASE_URL,
                 "rover_id": rover_id,
-                "time_left": rover_controls[rover_id].get_time_left(),
+                "time_left": rover_controls[rover_id].get_time_left(raw=True),
+                "end_url": "/v1",
             },
         )
     elif mode == "lr":
@@ -871,7 +874,8 @@ async def update_time(rover_id: str, mode: str, request: Request):
                 "fc_frame_image": f"/static/tumbllerImage.jpg",
                 "base_url": BASE_URL,
                 "rover_id": rover_id,
-                "time_left": rover_controls[rover_id].get_time_left(),
+                "time_left": rover_controls[rover_id].get_time_left(raw=True),
+                "end_url": "/v1",
             },
         )
     else:
@@ -882,7 +886,8 @@ async def update_time(rover_id: str, mode: str, request: Request):
                 "fc_frame_image": f"/static/tumbllerImage.jpg",
                 "base_url": BASE_URL,
                 "rover_id": rover_id,
-                "time_left": rover_controls[rover_id].get_time_left(),
+                "time_left": rover_controls[rover_id].get_time_left(raw=True),
+                "end_url": "/v1",
             },
         )
 

@@ -511,6 +511,7 @@ async def select_rover(rover_id: str, request: Request):
             sender = str(user_fid)
 
         if rover_controls[rover_id].is_available():
+            logger.debug(f"Rover {rover_id} available and acquired")
             if payment:
                 return await pay(rover_id=rover_id, request=request, user_fid=sender)
             else:
@@ -528,7 +529,8 @@ async def select_rover(rover_id: str, request: Request):
                     },
                 )
         else:
-            time_left = rover_controls[rover_id].get_time_left()
+            logger.debug(f"Rover {rover_id} not available. Redirecting to wait screen")
+            time_left = rover_controls[rover_id].get_time_left(raw=True)
             return templates.TemplateResponse(
                 "waiting.html",
                 {
@@ -679,7 +681,7 @@ async def transaction_callback(
                         "fc_frame_image": get_image_url(BASE_URL, rover_id),
                         "base_url": f"{BASE_URL}/",
                         "rover_id": rover_id,
-                        "time_left": rover_controls[rover_id].get_time_left(),
+                        "time_left": rover_controls[rover_id].get_time_left(raw=True),
                     },
                 )
             else:
@@ -690,7 +692,7 @@ async def transaction_callback(
                         "fc_frame_image": get_image_url(BASE_URL, rover_id),
                         "base_url": f"{BASE_URL}/",
                         "rover_id": rover_id,
-                        "time_left": rover_controls[rover_id].get_time_left(),
+                        "time_left": rover_controls[rover_id].get_time_left(raw=True),
                     },
                 )
         else:

@@ -750,31 +750,14 @@ async def take_rover_picture(rover_id: str, request: Request):
 
     success = await take_picture(rover_id)
 
-    # Get the referer URL to determine which frame to return to
-    referer = request.headers.get("referer", "")
-
-    # Default to control_mode if can't determine frame
-    template_name = "control_mode.html"
-
-    # Determine which frame to return to based on the referer URL
-    if "control/fb" in referer:
-        template_name = "fb_control.html"
-    elif "control/lr" in referer:
-        template_name = "lr_control.html"
-
     # Get the URL for the newly taken picture
     image_url = get_image_url(BASE_URL, rover_id)
 
-    return templates.TemplateResponse(
-        template_name,
-        {
-            "request": request,
-            "fc_frame_image": image_url,
-            "base_url": f"{BASE_URL}/",  # Make sure there's a trailing slash
-            "rover_id": rover_id,
-            "time_left": rover_controls[rover_id].get_time_left(),
-        },
-    )
+    return {
+        "fc_frame_image": image_url,
+        "rover_id": rover_id,
+        "time_left": rover_controls[rover_id].get_time_left(raw=True),
+    }
 
 
 # Movement and Picture Commands

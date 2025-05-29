@@ -410,7 +410,7 @@ async def mini_app_manifest(request: Request):
         "version": "1",
         "name": "Yak Rover Tumbller",
         "subtitle": "Fractional Robotics",
-        "homeUrl": f"https://{FQDN}/",
+        "homeUrl": f"https://{FQDN}/v1",
         "iconUrl": f"https://{FQDN}/static/icon.png",
         "buttonTitle": "🦬 Start",
         "splashBackgroundColor": "#f5f0ec",

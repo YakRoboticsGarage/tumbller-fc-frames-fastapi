@@ -45,18 +45,22 @@ MNEMONIC_ENV_VAR=FARCASTER-KEY
 ```
 ## Running the frame server 
 
-* Replace each of the variable with the correct value.
+* Replace each of the variable with the correct value from `.env.template` and put them into a `.env` file.
+* Get the association file from the Manifest tool: https://farcaster.xyz/~/developers/mini-apps/manifest
 * ngrok  url is got after starting ngrok with 
-  * `ngrok http 8080`
+  * `ngrok http --url=<domain name> 8080`
 * Now setup the fastapi python virtual env with this command
   * `python -m venv venv`
   * `pip install -r requirements.txt`
   * `source venv/bin/activate`
 * Now you should see a (venv) prefix in your command prompt
-* Start the frames server by going into farcaster-frames-server folder
+* If you have no Tumbller around, you can use the fake rover
+  * From the root of this repository (in a different shell): `PYTHONPATH=. python dev/fake_rover.py`
+  * The fake rover by default listens on localhost at 5001
+* Start the MiniApp server by going into farcaster-frames-server folder
   * `cd farcaster-frames-server`
 * Start the frames server with command
   * `uvicorn main:app --host 0.0.0.0 --port 8080 --reload`
 * Open a browser logged in with farcaster and then go to this url to test the frame
-  * `https://warpcast.com/~/developers/frames`
-  * Pase the ngrok url into it and play with the robot
+  * `https://farcaster.xyz/~/developers/mini-apps/embed` (you can also use the Manifest Tool; you can also try directly in a browser, but there will be no Farcaster integration there (e.g. payment will not work)).
+  * Paste the ngrok url into it and play with the robot

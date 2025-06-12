@@ -62,5 +62,5 @@ MNEMONIC_ENV_VAR=FARCASTER-KEY
 * Start the frames server with command
   * `uvicorn main:app --host 0.0.0.0 --port 8080 --reload`
 * Open a browser logged in with farcaster and then go to this url to test the frame
-  * `https://farcaster.xyz/~/developers/mini-apps/embed` (you can also use the Manifest Tool; you can also try directly in a browser, but there will be no Farcaster integration there (e.g. payment will not work)).
+  * https://farcaster.xyz/~/developers/mini-apps/embed (you can also use the Manifest Tool; you can also try directly in a browser, but there will be no Farcaster integration there (e.g. payment will not work)).
   * Paste the ngrok url into it and play with the robot

@@ -49,5 +49,5 @@ FQDN = os.environ["FQDN"]
 BASE_URL = current_config["BASE_URL"]
 TUMBLLER_BASE_URLS = current_config["TUMBLLER_BASE_URLS"]
 
-with open(os.environ["ACCOUNT_ASSOCIATION_FILE"]) as f:
-    ACCOUNT_ASSOCIATION = json.load(f)
+FARCASTER_HOSTED_MANIFEST_URL = os.environ["FARCASTER_HOSTED_MANIFEST_URL"]
+

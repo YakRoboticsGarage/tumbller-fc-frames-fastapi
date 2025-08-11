@@ -68,13 +68,19 @@ Under the standard setup:
 * Now setup the server code
   * `python -m venv venv`
   * `source venv/bin/activate`
-  * `pip install -r requirements.txt`
+  * `pip install ".[prod]"
 * If you have no Tumbller around, you can use the fake rover
   * From the root of this repository (in a different shell): `PYTHONPATH=. python dev/fake_rover.py`
   * The fake rover by default listens on localhost at 5001, and can be modified in `.env`.
+* TLS configuration is now comulsory for MiniApp servers. Here example with [Let's Encrypt](https://certbot.eff.org/instructions?ws=other&os=snap) on Ubuntu:
+  * `sudo snap install --classic certbot`: Prepare for certificate confguration.
+  * `sudo ln -s /snap/bin/certbot /usr/bin/certbot`: End of preps.
+  * `sudo certbot certonly --standalone`: Configure certificate and renewal automation.
+  * `sudo certbot renew --dry-run`: Check renewal works fine.
 * Start the MiniApp server by going into the `farcaster-frames-server` folder
   * `cd farcaster-frames-server`
-  * `uvicorn main:app --host 0.0.0.0 --port 8080 --reload`
+  * `sudo uvicorn main:app --host 0.0.0.0 --port 443 --reload --ssl-keyfile /etc/letsencrypt/live/yakrover.com/privkey.pem --ssl-certfile /etc/letsencrypt/live/yakrover.com/fullchain.pem`
+  * Note Farcaster expects the server to listen on 443, not customizable anymore.
 * Open a browser logged in with farcaster and then go to this url to test the frame
   * https://farcaster.xyz/~/developers/mini-apps/embed (you can also use the Manifest Tool; you can also try directly in a browser, but there will be no Farcaster integration there (e.g. payment will not work)).
   * Paste the Ngrok URL into it and play with the robot

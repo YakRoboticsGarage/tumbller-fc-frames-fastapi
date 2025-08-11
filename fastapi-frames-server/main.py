@@ -50,12 +50,12 @@ load_dotenv()
 
 import helpers
 from config import (
-    ACCOUNT_ASSOCIATION,
     TUMBLLER_CAMERA_URLS,
     BASE_URL,
     ENV,
     FQDN,
     TUMBLLER_BASE_URLS,
+    FARCASTER_HOSTED_MANIFEST_URL,
 )
 
 
@@ -403,31 +403,14 @@ rover_controls: Dict[str, RoverControl] = {"A": RoverControl(), "B": RoverContro
 
 
 # Routes
-@app.get("/.well-known/farcaster.json")
+@app.get("/.well-known/farcaster.json", response_class=RedirectResponse, status_code=307)
 async def mini_app_manifest(request: Request):
-    response = ACCOUNT_ASSOCIATION
-    response["frame"] = {
-        "version": "1",
-        "name": "Yak Rover Tumbller",
-        "subtitle": "Fractional Robotics",
-        "homeUrl": f"https://{FQDN}/v1",
-        "iconUrl": f"https://{FQDN}/static/icon.png",
-        "buttonTitle": "🦬 Start",
-        "splashBackgroundColor": "#f5f0ec",
-        "tags": ["rover", "robot", "yak", "collective"]
-    }
-    return response
+    return FARCASTER_HOSTED_MANIFEST_URL
 
 
 @app.get("/")
 async def root(request: Request):
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        {
-            "fqdn": FQDN,
-        }
-    )
+    return RedirectResponse("/v1")
 
 
 @app.get("/v1")

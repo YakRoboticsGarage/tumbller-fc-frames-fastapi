@@ -3,6 +3,7 @@
 set -e
 
 root_dir=$(realpath $0 | rev | cut -d / -f 3- | rev)
+port=${1:-8080}
 
 if [[ ! -d "${root_dir}/venv" ]]
 then
@@ -13,6 +14,8 @@ fi
 pushd $root_dir
   source venv/bin/activate
   pushd fastapi-frames-server
-    uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+    uvicorn main:app --host 0.0.0.0 --port "$port" --reload \
+	    --ssl-keyfile /etc/letsencrypt/live/yakrover.com/privkey.pem \
+	    --ssl-certfile /etc/letsencrypt/live/yakrover.com/fullchain.pem
   popd
 popd
